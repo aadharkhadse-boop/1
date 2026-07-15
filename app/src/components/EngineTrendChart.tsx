@@ -1,19 +1,20 @@
 import { useId } from 'react';
-import { MONTHS, spark } from '../lib/calc';
+import { spark } from '../lib/calc';
 
 interface Props {
   series: (number | null)[];
+  months: string[];
   color: string;
   unit: string; // e.g. ' g/kWh' or ' t'
 }
 
-export function EngineTrendChart({ series, color, unit }: Props) {
+export function EngineTrendChart({ series, months, color, unit }: Props) {
   const w = 300, h = 42;
   const present = series.filter((v) => v != null);
   if (present.length < 2) return null;
   const sp = spark(series, w, h);
   const gradId = 'espk-' + useId().replace(/[:]/g, '');
-  const monthLabels = MONTHS.slice(0, series.length);
+  const monthLabels = months.slice(0, series.length);
 
   return (
     <div style={{ padding: '9px 13px 5px', borderTop: '1px solid #f0f3f3' }}>
@@ -50,7 +51,7 @@ export function EngineTrendChart({ series, color, unit }: Props) {
                   ...tip,
                 }}
               >
-                {(MONTHS[p.i] || '')} '26 · {series[p.i]!.toFixed(1)}{unit}
+                {(months[p.i] || '')} · {series[p.i]!.toFixed(1)}{unit}
               </div>
             </div>
           );

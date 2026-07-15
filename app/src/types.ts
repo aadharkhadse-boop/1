@@ -34,6 +34,8 @@ export interface Vessel {
 
   stwDev: number | null;
   series: (number | null)[];
+  /** Display label per index of `series` and the *Series fields below, e.g. "Jan '26" — one per accumulated monthly file, oldest first. */
+  monthLabels: string[];
   hullPerf: string | null;
 
   meLoadS: string | null; meSfocS: string | null; meShopS: string | null; meDevS: string | null;

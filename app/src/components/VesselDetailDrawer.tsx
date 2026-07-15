@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { VesselWithTier } from '../types';
-import { MONTHS, TIER, fmtDev, fmtPct, fmtStw, monthsTxt } from '../lib/calc';
+import { TIER, fmtDev, fmtPct, fmtStw, monthsTxt } from '../lib/calc';
 import { VesselTrendChart } from './VesselTrendChart';
 import { useRemark } from '../hooks/useRemark';
 
@@ -34,13 +34,13 @@ export function VesselDetailDrawer({ vessel: c, onClose }: Props) {
   else if (c.devAct == null) expAct = `The last hull activity (${c.lastActType || 'activity'}, ${monthsTxt(c.lastActMonths)} ago) has too little post-event data to measure a change.`;
   else expAct = `Excess power is ${Math.abs(c.devAct).toFixed(1)}% ${dirWord(c.devAct)} than at the last hull activity (${c.lastActType || 'activity'}, ${monthsTxt(c.lastActMonths)} ago), baseline ${c.refMonthAct}.`;
 
-  const lvs = (c.levelSeries || []).map((lv, i) => ({ m: MONTHS[i], lv })).filter((x): x is { m: string; lv: string } => !!x.lv);
+  const lvs = (c.levelSeries || []).map((lv, i) => ({ m: c.monthLabels[i], lv })).filter((x): x is { m: string; lv: string } => !!x.lv);
   let levelChanged = false, levelChangeText = '';
   if (lvs.length >= 2) {
     const curLv = lvs[lvs.length - 1].lv;
     let k = lvs.length - 1;
     while (k > 0 && lvs[k - 1].lv === curLv) k--;
-    if (k > 0) { levelChanged = true; levelChangeText = `was ${lvs[k - 1].lv}, changed in ${lvs[k].m} 2026`; }
+    if (k > 0) { levelChanged = true; levelChangeText = `was ${lvs[k - 1].lv}, changed in ${lvs[k].m}`; }
   }
 
   return (
@@ -102,7 +102,7 @@ export function VesselDetailDrawer({ vessel: c, onClose }: Props) {
               <div style={{ fontSize: 13, fontWeight: 600, color: '#003143' }}>Excess power trend</div>
               <div style={{ fontSize: 11.5, color: '#80a1aa' }}>{c.epSource} · monthly</div>
             </div>
-            <VesselTrendChart series={c.series} color={T.c} />
+            <VesselTrendChart series={c.series} months={c.monthLabels} color={T.c} />
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={devBoxBg(c.dev6m)}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

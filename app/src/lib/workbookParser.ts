@@ -1,6 +1,5 @@
 import * as XLSX from 'xlsx';
 import type { Vessel } from '../types';
-import { MONTHS } from './calc';
 import { engNum } from './engineCalc';
 import { parseCiiRows, type CiiParseInput } from './ciiParser';
 import {
@@ -114,23 +113,47 @@ function authNum(rec: MonthRec | undefined, sKey: keyof MonthRec, nKey: keyof Mo
 export interface ParseResult {
   vessels: Vessel[];
   monthCount: number;
+  monthLabels: string[];
   ciiRows: ReturnType<typeof parseCiiRows>;
 }
 
-export function parseWorkbookBuffer(buf: ArrayBuffer): ParseResult {
-  const wb = XLSX.read(buf, { type: 'array' });
+export interface MonthlyFileInput {
+  /** Short display label for this month, e.g. "Jan '26" */
+  label: string;
+  buf: ArrayBuffer;
+}
+
+/** One workbook per reporting month, oldest first. Each file's own sheets are scanned for the hull/engine report (by header match) and a CII sheet, if present. */
+export function parseMonthlyFiles(files: MonthlyFileInput[]): ParseResult {
   const reports: Record<string, MonthRec>[] = [];
+  const monthLabels: string[] = [];
   const actionMap: Record<string, string> = {};
-  const allSheets: CiiParseInput[] = [];
-  for (const name of wb.SheetNames) {
-    const ws = wb.Sheets[name];
-    const rows = XLSX.utils.sheet_to_json<Cell[]>(ws, { header: 1, defval: null, raw: true }) as SheetRows;
-    allSheets.push({ rows });
-    const parsed = parseSheetToMonthRecords(rows);
-    if (parsed) { reports.push(parsed.data); Object.assign(actionMap, parsed.actionMap); }
+  const allSheetsForCii: CiiParseInput[] = [];
+
+  for (const file of files) {
+    const wb = XLSX.read(file.buf, { type: 'array' });
+    let primary: SheetParseResult | null = null;
+    for (const name of wb.SheetNames) {
+      const ws = wb.Sheets[name];
+      const rows = XLSX.utils.sheet_to_json<Cell[]>(ws, { header: 1, defval: null, raw: true }) as SheetRows;
+      allSheetsForCii.push({ rows });
+      const parsed = parseSheetToMonthRecords(rows);
+      if (parsed) {
+        // First report-matching sheet supplies the month's vessel data; the Action Required
+        // column may live in a separate report sheet in the same file (e.g. a "Monthly Report"
+        // tab), so merge the action flags from every report sheet, not just the primary one.
+        if (!primary) primary = parsed;
+        Object.assign(actionMap, parsed.actionMap);
+      }
+    }
+    if (primary) {
+      reports.push(primary.data);
+      monthLabels.push(file.label);
+    }
   }
-  const months = MONTHS;
-  const per = reports.slice(0, months.length);
+
+  const months = monthLabels;
+  const per = reports;
   const cur = per[per.length - 1] || {};
   const last = per.length - 1;
 
@@ -172,7 +195,7 @@ export function parseWorkbookBuffer(buf: ArrayBuffer): ParseResult {
       ai: v.ai, logSensor: v.logSensor, logNoon: v.logNoon,
       epDev, dev6m, refMonth6, devAct, refMonthAct,
       ddMonths: dd, hcMonths: hc, hiMonths: hins, lastActMonths: lastAct, lastActType: actType,
-      stwDev: v.stwDev, series, hullPerf: v.hullPerf,
+      stwDev: v.stwDev, series, hullPerf: v.hullPerf, monthLabels: months,
       meLoadS: str(v.meLoadS) || null, meSfocS: str(v.meSfocS) || null, meShopS: str(v.meShopS) || null, meDevS: str(v.meDevS) || null,
       meLoadN: str(v.meLoadN) || null, meSfocN: str(v.meSfocN) || null, meShopN: str(v.meShopN) || null, meDevN: str(v.meDevN) || null,
       scocS: str(v.scocS) || null, scocN: str(v.scocN) || null,
@@ -189,6 +212,6 @@ export function parseWorkbookBuffer(buf: ArrayBuffer): ParseResult {
       levelSeries: per.map((m) => (m[imo] && m[imo].level) ? (m[imo].level as string) : null),
     });
   }
-  const ciiRows = parseCiiRows(allSheets);
-  return { vessels, monthCount: per.length, ciiRows };
+  const ciiRows = parseCiiRows(allSheetsForCii);
+  return { vessels, monthCount: per.length, monthLabels: months, ciiRows };
 }

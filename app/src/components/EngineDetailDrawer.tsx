@@ -143,7 +143,7 @@ export function EngineDetailDrawer({ vessel: c, onClose }: Props) {
                           </div>
                         </div>
                       ) : null}
-                      <EngineTrendChart series={b.series} color={b.accent} unit={b.unit} />
+                      <EngineTrendChart series={b.series} months={c.monthLabels} color={b.accent} unit={b.unit} />
                       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 74px 74px', gap: 8, padding: '6px 13px', background: '#fff', fontSize: 9.5, letterSpacing: '.04em', textTransform: 'uppercase', color: '#80a1aa', fontWeight: 600, borderTop: '1px solid #f0f3f3' }}>
                         <div>Parameter</div>
                         <div style={{ textAlign: 'right', color: useS ? '#156e80' : '#80a1aa', fontWeight: useS ? 700 : 600 }}>Sensor</div>

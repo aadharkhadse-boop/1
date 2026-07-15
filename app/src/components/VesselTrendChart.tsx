@@ -1,12 +1,13 @@
 import { useId } from 'react';
-import { MONTHS, spark } from '../lib/calc';
+import { spark } from '../lib/calc';
 
 interface Props {
   series: (number | null)[];
+  months: string[];
   color: string;
 }
 
-export function VesselTrendChart({ series, color }: Props) {
+export function VesselTrendChart({ series, months, color }: Props) {
   const w = 340, h = 66;
   const sp = spark(series, w, h);
   const gradId = 'spk-' + useId().replace(/[:]/g, '');
@@ -38,13 +39,13 @@ export function VesselTrendChart({ series, color }: Props) {
                 whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', boxShadow: '0 4px 12px rgba(0,49,67,.25)',
               }}
             >
-              {MONTHS[p.i]} '26 · {series[p.i]!.toFixed(1)}%
+              {months[p.i] || ''} · {series[p.i]!.toFixed(1)}%
             </div>
           </div>
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: '#80a1aa', marginTop: 2 }}>
-        {MONTHS.map((m) => <span key={m}>{m} '26</span>)}
+        {months.map((m, i) => <span key={i}>{m}</span>)}
       </div>
     </div>
   );

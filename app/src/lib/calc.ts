@@ -1,7 +1,5 @@
 import type { DevBand, StwBand, Thresholds, TierKey, VesselWithTier } from '../types';
 
-export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-
 export interface Tier {
   c: string;
   soft: string;

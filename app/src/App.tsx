@@ -58,7 +58,7 @@ function App() {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#003143' }}>
-      <Header monthCount={meta?.monthCount ?? 6} />
+      <Header monthLabels={meta?.monthLabels ?? []} />
 
       {loading || !vessels ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#5d7780' }}>
