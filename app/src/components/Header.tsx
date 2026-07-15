@@ -16,7 +16,6 @@ function rangeLabel(monthCount: number, year = 2026): string {
 
 interface Props {
   monthCount: number;
-  onUploadClick: () => void;
 }
 
 const wrap: CSSProperties = {
@@ -25,7 +24,7 @@ const wrap: CSSProperties = {
   boxShadow: '0 2px 12px rgba(0,49,67,.25)', zIndex: 5,
 };
 
-export function Header({ monthCount, onUploadClick }: Props) {
+export function Header({ monthCount }: Props) {
   return (
     <header style={wrap}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
@@ -43,12 +42,6 @@ export function Header({ monthCount, onUploadClick }: Props) {
         <span style={{ fontSize: 13, fontWeight: 600, background: 'rgba(80,177,140,.22)', color: '#a8d7c5', padding: '5px 12px', borderRadius: 999 }}>
           {reportingMonthLabel(monthCount)}
         </span>
-        <button
-          onClick={onUploadClick}
-          style={{ border: '1px solid rgba(255,255,255,.35)', background: 'transparent', color: '#fff', font: 'inherit', fontSize: 12.5, fontWeight: 500, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          Upload workbook
-        </button>
       </div>
     </header>
   );

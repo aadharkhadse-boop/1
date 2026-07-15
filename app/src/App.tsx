@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { TabBar, type TabKey } from './components/TabBar';
 import { DashboardTab } from './components/DashboardTab';
@@ -17,10 +17,9 @@ import { THRESHOLD_DEFAULTS } from './types';
 type Selected = { imo: string; kind: 'hull' | 'engine' } | null;
 
 function App() {
-  const { vessels, ciiRows, meta, loading, loadingText, error, uploadFile, resetToSample } = useFleetData();
+  const { vessels, ciiRows, meta, loading, loadingText, error, reload } = useFleetData();
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [selected, setSelected] = useState<Selected>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const thresholds = THRESHOLD_DEFAULTS;
   const all = useMemo(() => tierOfAll(vessels ?? [], thresholds), [vessels, thresholds]);
@@ -57,25 +56,17 @@ function App() {
 
   const selectedVessel = selected ? all.find((v) => v.imo === selected.imo) : undefined;
 
-  const onUploadClick = () => fileInputRef.current?.click();
-  const onFileChosen: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (file) uploadFile(file);
-    e.target.value = '';
-  };
-
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#003143' }}>
-      <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={onFileChosen} />
-      <Header monthCount={meta?.monthCount ?? 6} onUploadClick={onUploadClick} />
+      <Header monthCount={meta?.monthCount ?? 6} />
 
       {loading || !vessels ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#5d7780' }}>
           <div style={{ width: 38, height: 38, border: '3px solid #cdd9dd', borderTopColor: '#156e80', borderRadius: '50%', animation: 'znspin .8s linear infinite' }} />
           <div style={{ fontSize: 14 }}>{error ? 'Could not read workbook: ' + error : loadingText}</div>
           {error ? (
-            <button onClick={resetToSample} style={{ border: '1px solid #156e80', background: '#fff', color: '#156e80', font: 'inherit', fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 999, cursor: 'pointer' }}>
-              Reload sample data
+            <button onClick={reload} style={{ border: '1px solid #156e80', background: '#fff', color: '#156e80', font: 'inherit', fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 999, cursor: 'pointer' }}>
+              Retry
             </button>
           ) : null}
         </div>
