@@ -8,6 +8,7 @@ import { SmartAnalyticsSummaryTab } from './components/SmartAnalyticsSummaryTab'
 import { CiiDashboardTab } from './components/CiiDashboardTab';
 import { VesselDetailDrawer } from './components/VesselDetailDrawer';
 import { EngineDetailDrawer } from './components/EngineDetailDrawer';
+import { LoginGate } from './components/LoginGate';
 import { useFleetData } from './hooks/useFleetData';
 import { useCheckedMap } from './hooks/useCheckedMap';
 import { tierOfAll } from './lib/calc';
@@ -16,8 +17,22 @@ import { THRESHOLD_DEFAULTS } from './types';
 
 type Selected = { imo: string; kind: 'hull' | 'engine' } | null;
 
+const PW_KEY = 'znAccessPw';
+
 function App() {
-  const { vessels, ciiRows, meta, loading, loadingText, error, reload } = useFleetData();
+  // Access password held only in sessionStorage (cleared when the tab closes), never in the bundle.
+  const [password, setPassword] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(PW_KEY); } catch { return null; }
+  });
+
+  if (!password) {
+    return <LoginGate onUnlock={(pw) => { try { sessionStorage.setItem(PW_KEY, pw); } catch { /* ignore */ } setPassword(pw); }} />;
+  }
+  return <Dashboard password={password} onLock={() => { try { sessionStorage.removeItem(PW_KEY); } catch { /* ignore */ } setPassword(null); }} />;
+}
+
+function Dashboard({ password, onLock }: { password: string; onLock: () => void }) {
+  const { vessels, ciiRows, meta, loading, loadingText, error, reload } = useFleetData(password);
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [selected, setSelected] = useState<Selected>(null);
 
@@ -63,11 +78,16 @@ function App() {
       {loading || !vessels ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#5d7780' }}>
           <div style={{ width: 38, height: 38, border: '3px solid #cdd9dd', borderTopColor: '#156e80', borderRadius: '50%', animation: 'znspin .8s linear infinite' }} />
-          <div style={{ fontSize: 14 }}>{error ? 'Could not read workbook: ' + error : loadingText}</div>
+          <div style={{ fontSize: 14 }}>{error ? 'Could not load data: ' + error : loadingText}</div>
           {error ? (
-            <button onClick={reload} style={{ border: '1px solid #156e80', background: '#fff', color: '#156e80', font: 'inherit', fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 999, cursor: 'pointer' }}>
-              Retry
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={reload} style={{ border: '1px solid #156e80', background: '#fff', color: '#156e80', font: 'inherit', fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 999, cursor: 'pointer' }}>
+                Retry
+              </button>
+              <button onClick={onLock} style={{ border: '1px solid #cdd9dd', background: '#fff', color: '#5d7780', font: 'inherit', fontSize: 13, fontWeight: 500, padding: '8px 16px', borderRadius: 999, cursor: 'pointer' }}>
+                Re-enter password
+              </button>
+            </div>
           ) : null}
         </div>
       ) : (

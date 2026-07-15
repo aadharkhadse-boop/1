@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fleet Dashboard — Encrypt monthly data</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, "Segoe UI", Roboto, sans-serif; background: #eef2f2; color: #003143; }
+  .wrap { max-width: 560px; margin: 40px auto; background: #fff; border: 1px solid #cdd9dd; border-radius: 14px; padding: 28px 30px; box-shadow: 0 2px 10px rgba(0,49,67,.08); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 22px; color: #5d7780; font-size: 13.5px; line-height: 1.5; }
+  label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #5d7780; margin: 18px 0 6px; }
+  input[type=password], input[type=file] { width: 100%; padding: 11px 13px; border: 1px solid #cdd9dd; border-radius: 9px; font-size: 14px; font-family: inherit; color: #003143; background: #fff; }
+  button { margin-top: 22px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #156e80; color: #fff; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  button:disabled { background: #9fc0c8; cursor: default; }
+  .note { margin-top: 18px; font-size: 12px; color: #5d7780; line-height: 1.5; }
+  .log { margin-top: 18px; font-size: 13px; }
+  .log div { padding: 4px 0; }
+  .ok { color: #2f7d5f; }
+  .err { color: #a52a52; }
+  code { background: #eef2f2; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Encrypt monthly data</h1>
+  <p class="sub">Turns a plain <code>.xlsx</code> report into an encrypted <code>.enc</code> file for the dashboard. Everything runs locally in this page — nothing is uploaded anywhere. Use the <strong>same password</strong> that unlocks the dashboard.</p>
+
+  <label for="pw">Dashboard password</label>
+  <input id="pw" type="password" placeholder="the access password" autocomplete="off">
+
+  <label for="files">Monthly workbook(s) — .xlsx</label>
+  <input id="files" type="file" accept=".xlsx" multiple>
+
+  <button id="go" disabled>Encrypt &amp; download .enc</button>
+
+  <div class="note">
+    Name each source file <code>YYYY-MM.xlsx</code> (e.g. <code>2026-07.xlsx</code>) — the encrypted file keeps the name as <code>2026-07.enc</code>. Put the downloaded <code>.enc</code> into <code>app/src/data/monthly/</code> in your repo, then commit &amp; push.
+  </div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+const SALT_BYTES = 16, IV_BYTES = 12, ITERS = 250000;
+const pw = document.getElementById('pw');
+const filesEl = document.getElementById('files');
+const go = document.getElementById('go');
+const log = document.getElementById('log');
+
+function refresh() { go.disabled = !(pw.value && filesEl.files.length); }
+pw.addEventListener('input', refresh);
+filesEl.addEventListener('change', refresh);
+
+async function deriveKey(password, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: ITERS, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+}
+
+async function encryptOne(file, password) {
+  const plain = await file.arrayBuffer();
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+  const key = await deriveKey(password, salt);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plain));
+  const out = new Uint8Array(SALT_BYTES + IV_BYTES + ct.length);
+  out.set(salt, 0); out.set(iv, SALT_BYTES); out.set(ct, SALT_BYTES + IV_BYTES);
+  return out;
+}
+
+function download(bytes, name) {
+  const blob = new Blob([bytes], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+go.addEventListener('click', async () => {
+  go.disabled = true; log.innerHTML = '';
+  const password = pw.value;
+  for (const file of filesEl.files) {
+    const line = document.createElement('div');
+    log.appendChild(line);
+    try {
+      const encName = file.name.replace(/\.xlsx$/i, '') + '.enc';
+      const bytes = await encryptOne(file, password);
+      download(bytes, encName);
+      line.className = 'ok';
+      line.textContent = '✓ ' + file.name + ' → ' + encName;
+    } catch (e) {
+      line.className = 'err';
+      line.textContent = '✗ ' + file.name + ' — ' + e;
+    }
+  }
+  go.disabled = false;
+});
+</script>
+</body>
+</html>
