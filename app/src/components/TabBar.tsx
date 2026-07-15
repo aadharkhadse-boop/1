@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 
-export type TabKey = 'dashboard' | 'summary' | 'analytics' | 'analytics-summary';
+export type TabKey = 'dashboard' | 'summary' | 'analytics' | 'analytics-summary' | 'cii';
 
 export interface TabDef {
   key: TabKey;

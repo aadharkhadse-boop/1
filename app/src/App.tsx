@@ -5,6 +5,7 @@ import { DashboardTab } from './components/DashboardTab';
 import { SummaryTab } from './components/SummaryTab';
 import { SmartAnalyticsTab } from './components/SmartAnalyticsTab';
 import { SmartAnalyticsSummaryTab } from './components/SmartAnalyticsSummaryTab';
+import { CiiDashboardTab } from './components/CiiDashboardTab';
 import { VesselDetailDrawer } from './components/VesselDetailDrawer';
 import { EngineDetailDrawer } from './components/EngineDetailDrawer';
 import { useFleetData } from './hooks/useFleetData';
@@ -16,7 +17,7 @@ import { THRESHOLD_DEFAULTS } from './types';
 type Selected = { imo: string; kind: 'hull' | 'engine' } | null;
 
 function App() {
-  const { vessels, meta, loading, loadingText, error, uploadFile, resetToSample } = useFleetData();
+  const { vessels, ciiRows, meta, loading, loadingText, error, uploadFile, resetToSample } = useFleetData();
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [selected, setSelected] = useState<Selected>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +45,12 @@ function App() {
       tabs: [
         { key: 'analytics' as const, label: 'Smart Analytics Dashboard', badge: all.length, tip: 'Engine performance parameters (sensor vs noon) for every vessel' },
         { key: 'analytics-summary' as const, label: 'Smart Analytics Summary', badge: engineBands.engImmediate, tip: 'Vessels needing immediate machinery attention — ME or AE SFOC deviation ≥ 20 g/kWh' },
+      ],
+    },
+    {
+      label: 'CII',
+      tabs: [
+        { key: 'cii' as const, label: 'CII Dashboard', badge: ciiRows.length, tip: 'Carbon Intensity Indicator rating and EU ETS exposure for every vessel' },
       ],
     },
   ];
@@ -88,6 +95,7 @@ function App() {
           {tab === 'analytics-summary' && (
             <SmartAnalyticsSummaryTab bands={engineBands} checked={engChecked.checked} toggle={engChecked.toggle} onSelect={(imo) => setSelected({ imo, kind: 'engine' })} />
           )}
+          {tab === 'cii' && <CiiDashboardTab rows={ciiRows} />}
         </div>
       )}
 

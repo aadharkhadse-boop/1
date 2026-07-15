@@ -2,55 +2,11 @@ import * as XLSX from 'xlsx';
 import type { Vessel } from '../types';
 import { MONTHS } from './calc';
 import { engNum } from './engineCalc';
-
-type Cell = string | number | null;
-type SheetRows = Cell[][];
-
-function str(v: Cell): string {
-  return v == null ? '' : String(v);
-}
-
-function normLbl(label: Cell): string {
-  return str(label).toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-function findCol(hdr: Cell[], ...needles: string[]): number | null {
-  for (let col = 0; col < hdr.length; col++) {
-    if (hdr[col] == null) continue;
-    const L = normLbl(hdr[col]);
-    if (needles.every((n) => L.includes(n))) return col;
-  }
-  return null;
-}
-
-function findColExact(hdr: Cell[], label: string): number | null {
-  for (let col = 0; col < hdr.length; col++) {
-    if (hdr[col] == null) continue;
-    if (normLbl(hdr[col]) === label) return col;
-  }
-  return null;
-}
-
-function findColsExact(hdr: Cell[], label: string): number[] {
-  const r: number[] = [];
-  for (let col = 0; col < hdr.length; col++) {
-    if (hdr[col] == null) continue;
-    if (normLbl(hdr[col]) === label) r.push(col);
-  }
-  return r;
-}
-
-function between(cols: number[], a: number | null, b: number | null): number | null {
-  if (a == null || b == null) return null;
-  const lo = Math.min(a, b), hi = Math.max(a, b);
-  return cols.find((x) => x > lo && x < hi) ?? null;
-}
-
-function num(v: Cell): number | null {
-  if (v == null) return null;
-  const n = parseFloat(String(v).replace(/,/g, ''));
-  return isFinite(n) ? n : null;
-}
+import { parseCiiRows, type CiiParseInput } from './ciiParser';
+import {
+  between, decodeStr, findCol, findColExact, findColsExact, get, num, parseImo, str,
+  type Cell, type SheetRows,
+} from './xlsxUtils';
 
 function naNum(v: Cell): number | null {
   if (v == null || /n\/?a/i.test(String(v))) return null;
@@ -72,12 +28,6 @@ interface MonthRec {
   axLoadN: Cell; axSfocN: Cell; axShopN: Cell; axDevN: Cell;
   boilS: Cell; boilN: Cell;
   meCmt: string | null; aeCmt: string | null; boCmt: string | null;
-}
-
-function decodeStr(v: Cell): string | null {
-  if (v == null) return null;
-  const s = String(v).trim();
-  return s === '' ? null : s;
 }
 
 interface SheetParseResult {
@@ -117,15 +67,13 @@ function parseSheetToMonthRecords(rows: SheetRows): SheetParseResult | null {
   const axShopS = between(shops, c.axSfocS, c.axDevS);
   const axShopN = between(shops, c.axSfocN, c.axDevN);
 
-  const get = (row: Cell[], idx: number | null): Cell => (idx == null ? null : row[idx] ?? null);
-
   const actionCol = findCol(hdr, 'action', 'required');
 
   const data: Record<string, MonthRec> = {};
   const actionMap: Record<string, string> = {};
   for (let i = hi + 1; i < rows.length; i++) {
     const row = rows[i] || [];
-    const imo = String(get(row, c.imo) || '').trim().replace(/\.0+$/, '');
+    const imo = parseImo(get(row, c.imo));
     if (!/^\d{6,}$/.test(imo)) continue;
     if (actionCol != null) {
       const val = decodeStr(get(row, actionCol));
@@ -166,15 +114,18 @@ function authNum(rec: MonthRec | undefined, sKey: keyof MonthRec, nKey: keyof Mo
 export interface ParseResult {
   vessels: Vessel[];
   monthCount: number;
+  ciiRows: ReturnType<typeof parseCiiRows>;
 }
 
 export function parseWorkbookBuffer(buf: ArrayBuffer): ParseResult {
   const wb = XLSX.read(buf, { type: 'array' });
   const reports: Record<string, MonthRec>[] = [];
   const actionMap: Record<string, string> = {};
+  const allSheets: CiiParseInput[] = [];
   for (const name of wb.SheetNames) {
     const ws = wb.Sheets[name];
     const rows = XLSX.utils.sheet_to_json<Cell[]>(ws, { header: 1, defval: null, raw: true }) as SheetRows;
+    allSheets.push({ rows });
     const parsed = parseSheetToMonthRecords(rows);
     if (parsed) { reports.push(parsed.data); Object.assign(actionMap, parsed.actionMap); }
   }
@@ -238,5 +189,6 @@ export function parseWorkbookBuffer(buf: ArrayBuffer): ParseResult {
       levelSeries: per.map((m) => (m[imo] && m[imo].level) ? (m[imo].level as string) : null),
     });
   }
-  return { vessels, monthCount: per.length };
+  const ciiRows = parseCiiRows(allSheets);
+  return { vessels, monthCount: per.length, ciiRows };
 }

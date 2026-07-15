@@ -66,3 +66,11 @@ button, input, select, textarea {
 .zn-close-hover:hover {
   background: #deefe9 !important;
 }
+
+.cii-row:hover {
+  background: #f4f8f8 !important;
+}
+
+.cii-th:hover {
+  color: #156e80 !important;
+}

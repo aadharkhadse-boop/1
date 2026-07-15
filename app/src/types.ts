@@ -71,3 +71,18 @@ export const THRESHOLD_LIMITS = {
 };
 
 export type SelectedFrom = 'hull' | 'engine' | null;
+
+export type CiiRating = 'A' | 'B' | 'C' | 'D' | 'E' | '';
+
+export interface CiiRow {
+  imo: string;
+  vessel: string;
+  owner: string;
+  vtype: string;
+  dwt: number | null;
+  latest: number | null; // Excel date serial
+  rating: CiiRating;
+  pct: number | null; // fraction, e.g. 0.85 = 85%
+  attained: number | null; // g-CO2/t-nm
+  eua: number | null; // EUR
+}

@@ -71,3 +71,16 @@ export function exportEngList(rows: EngListExportRow[], filename: string) {
   ));
   download(table(head, rowsHtml), filename + '.xls');
 }
+
+export interface CiiExportRow {
+  imo: string; vessel: string; owner: string; vtype: string; dwt: number | null;
+  latestFmt: string; rating: string; pct: number | null; attained: number | null; eua: number | null;
+}
+
+export function exportCiiList(rows: CiiExportRow[], filename: string) {
+  const head = ['IMO No.', 'Vessel', 'Ship Owner', 'Vessel Type', 'DWT', 'Latest Data (UTC)', 'CII Rating', 'CII Percentage', 'CII Attained (g-CO2/t-nm)', 'EUA (€) @ 100%'];
+  const rowsHtml = rows.map((r) => (
+    '<tr><td>' + esc(r.imo) + '</td><td>' + esc(r.vessel) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.vtype) + '</td><td>' + (r.dwt == null ? '' : Math.round(r.dwt)) + '</td><td>' + esc(r.latestFmt) + '</td><td>' + esc(r.rating) + '</td><td>' + (r.pct == null ? '' : (r.pct * 100).toFixed(0) + '%') + '</td><td>' + (r.attained == null ? '' : r.attained.toFixed(2)) + '</td><td>' + (r.eua == null ? '' : Math.round(r.eua)) + '</td></tr>'
+  ));
+  download(table(head, rowsHtml), filename + '.xls');
+}
